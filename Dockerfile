@@ -5,7 +5,7 @@ ARG USE_CI
 RUN apt-get update
 
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get install -y gnupg2 curl lsb-core vim wget python3-pip libpng16-16 libjpeg-turbo8 libtiff5
+RUN apt-get install -y gnupg2 curl vim wget python3-pip libpng16-16 libjpeg-turbo8
 
 RUN apt-get install -y \
     # Base tools
@@ -30,7 +30,7 @@ RUN apt update
 
 
 # Build OpenCV
-RUN apt-get install -y python3-dev python3-numpy python2-dev
+RUN apt-get install -y python3-dev python3-numpy
 RUN apt-get install -y libavcodec-dev libavformat-dev libswscale-dev
 RUN apt-get install -y libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
 RUN apt-get install -y libgtk-3-dev
@@ -53,9 +53,9 @@ RUN cd /tmp && git clone https://github.com/stevenlovegrove/Pangolin && \
 COPY ./container_root/shell_scripts/vscode_install.sh /root/
 RUN cd /root/ && sudo chmod +x * && ./vscode_install.sh && rm -rf vscode_install.sh
 
-RUN apt-get update && apt-get install ros-humble-pcl-ros tmux -y
-RUN apt-get install ros-humble-nav2-common x11-apps nano -y
-RUN apt-get install -y gdb gdbserver ros-humble-rmw-cyclonedds-cpp ros-humble-cv-bridge ros-humble-image-transport ros-humble-image-common ros-humble-vision-opencv
+RUN apt-get update && apt-get install ros-${ROS_DISTRO}-pcl-ros tmux -y
+RUN apt-get install ros-${ROS_DISTRO}-nav2-common x11-apps nano -y
+RUN apt-get install -y gdb gdbserver ros-${ROS_DISTRO}-rmw-cyclonedds-cpp ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-image-transport ros-${ROS_DISTRO}-image-common ros-${ROS_DISTRO}-vision-opencv
 
 COPY ORB_SLAM3 /home/orb/ORB_SLAM3
 COPY orb_slam3_ros2_wrapper /root/colcon_ws/src/orb_slam3_ros2_wrapper
@@ -64,8 +64,8 @@ COPY slam_msgs /root/colcon_ws/src/slam_msgs
 
 # Build ORB-SLAM3 with its dependencies.
 RUN if [ "$USE_CI" = "true" ]; then \
-    . /opt/ros/humble/setup.sh && cd /home/orb/ORB_SLAM3 && mkdir -p build && ./build.sh && \
-    . /opt/ros/humble/setup.sh && cd /root/colcon_ws/ && colcon build --symlink-install; \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && cd /home/orb/ORB_SLAM3 && mkdir -p build && ./build.sh && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && cd /root/colcon_ws/ && colcon build --symlink-install; \
     fi
 
 RUN rm -rf /home/orb/ORB_SLAM3 /root/colcon_ws

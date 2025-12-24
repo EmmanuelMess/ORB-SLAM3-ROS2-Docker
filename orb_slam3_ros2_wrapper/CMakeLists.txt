@@ -64,6 +64,15 @@ add_executable(rgbd
 )
 ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs std_srvs)
 
+add_executable(stereo
+    src/type_conversion.cpp
+    src/orb_slam3_interface.cpp
+    src/time_profiler.cpp
+    src/stereo/stereo-slam-node.cpp
+    src/stereo/stereo.cpp
+)
+ament_target_dependencies(stereo rclcpp sensor_msgs cv_bridge message_filters ORB_SLAM3 Pangolin tf2_ros tf2_eigen slam_msgs pcl_ros pcl_conversions PCL nav_msgs std_srvs)
+
 # add_executable(test1
 #   src/ft.cpp
 #   src/test_frame.cpp
@@ -74,6 +83,10 @@ ament_target_dependencies(rgbd rclcpp sensor_msgs cv_bridge message_filters ORB_
 target_link_libraries(rgbd ${PCL_LIBRARIES})
 install(TARGETS rgbd
   DESTINATION lib/${PROJECT_NAME})
+
+target_link_libraries(stereo ${PCL_LIBRARIES})
+install(TARGETS stereo
+    DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch params
 DESTINATION share/${PROJECT_NAME}

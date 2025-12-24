@@ -621,4 +621,75 @@ namespace ORB_SLAM3_Wrapper
             return false;
         }
     }
+
+
+    bool ORBSLAM3Interface::trackStereo(const sensor_msgs::msg::Image::SharedPtr msgLeftRgb,
+        const sensor_msgs::msg::Image::SharedPtr msgRightRgb, Sophus::SE3f &Tcw)
+    {
+        orbAtlas_ = mSLAM_->GetAtlas();
+        cv_bridge::CvImageConstPtr cvLeftRGB;
+        // Copy the ros rgb image message to cv::Mat.
+        try
+        {
+            cvLeftRGB = cv_bridge::toCvShare(msgLeftRgb);
+        }
+        catch (cv_bridge::Exception &e)
+        {
+            std::cerr << "cv_bridge exception RGB!" << endl;
+            return false;
+        }
+
+        cv_bridge::CvImageConstPtr cvRightRGB;
+        // Copy the ros rgb image message to cv::Mat.
+        try
+        {
+            cvRightRGB = cv_bridge::toCvShare(msgRightRgb);
+        }
+        catch (cv_bridge::Exception &e)
+        {
+            std::cerr << "cv_bridge exception RGB!" << endl;
+            return false;
+        }
+
+        // track the frame.
+        Tcw = mSLAM_->TrackStereo(cvLeftRGB->image, cvRightRGB->image, typeConversions_->stampToSec(cvLeftRGB->header.stamp));
+        auto currentTrackingState = mSLAM_->GetTrackingState();
+        auto orbLoopClosing = mSLAM_->GetLoopClosing();
+        if (loopClosing_ && orbLoopClosing->mergeDetected())
+        {
+            // do not publish any values during map merging. This is because the reference poses change.
+            std::cout << "Waiting for merge to finish." << endl;
+            return false;
+        }
+        if (currentTrackingState == 2)
+        {
+            // time_profiler_->startEvent("RefPosesCalc");
+            calculateReferencePoses();
+            // time_profiler_->endEvent("RefPosesCalc");
+            // time_profiler_->startEvent("CorrectTracked");
+            correctTrackedPose(Tcw);
+            // time_profiler_->endEvent("CorrectTracked");
+            // auto tempTwc = Tcw.inverse();
+            // std::vector<ORB_SLAM3::MapPoint *> tempMapPoints;
+            // mapPointsVisibleFromPose(tempTwc, tempMapPoints, 1000, 5.0, 2.0);
+            hasTracked_ = true;
+            return true;
+        }
+        else
+        {
+            switch (currentTrackingState)
+            {
+            case 0:
+                std::cerr << "ORB-SLAM failed: No images yet." << endl;
+                break;
+            case 1:
+                std::cerr << "ORB-SLAM failed: Not initialized." << endl;
+                break;
+            case 3:
+                std::cerr << "ORB-SLAM failed: Tracking LOST." << endl;
+                break;
+            }
+            return false;
+        }
+    }
 }

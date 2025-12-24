@@ -95,6 +95,8 @@ namespace ORB_SLAM3_Wrapper
 
         bool trackRGBD(const sensor_msgs::msg::Image::SharedPtr msgRGB, const sensor_msgs::msg::Image::SharedPtr msgD, Sophus::SE3f &Tcw);
 
+        bool trackStereo(const sensor_msgs::msg::Image::SharedPtr msgRgbLeft, const sensor_msgs::msg::Image::SharedPtr msgRgbRight, Sophus::SE3f &Tcw);
+
         std::shared_ptr<WrapperTypeConversions> getTypeConversionPtr()
         {
             return typeConversions_;

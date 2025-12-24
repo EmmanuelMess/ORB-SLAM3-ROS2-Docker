@@ -13,46 +13,44 @@ This repository contains a dockerized comprehensive wrapper for ORB-SLAM3 on ROS
 
 ## 1. Clone this repository
 
-1. ```git clone https://github.com/suchetanrs/ORB-SLAM3-ROS2-Docker```
-2. ```cd ORB-SLAM3-ROS2-Docker```
-3. ```git submodule update --init --recursive --remote```
+1. ```git clone --recursive https://github.com/suchetanrs/ORB-SLAM3-ROS2-Docker```
 
-## 2. Install Docker on your system
+## 2. Rocker
 
-```bash
-cd ORB-SLAM3-ROS2-Docker
-sudo chmod +x container_root/shell_scripts/docker_install.sh
-./container_root/shell_scripts/docker_install.sh
-```
+1. Install Docker on your system
+2. python3 -m venv .venv
+3. source .venv/bin/activate
+4. python3 -m pip install rocker
 
 ## 3. Build the image with ORB_SLAM3
 
-1. Build the image: ```sudo docker build --build-arg USE_CI=false -t orb-slam3-humble:22.04 .```
-2. Add ```xhost +``` to your ```.bashrc``` to support correct x11-forwarding using ```echo "xhost +" >> ~/.bashrc```
-3. ```source ~/.bashrc```
-4. You can see the built images on your machine by running ```sudo docker images```.
+1. Build the image: `docker build --build-arg USE_CI=false -t orb-slam3-humble:humble-jammy .`
 
 ## 4. Running the container
 
-1. ```cd ORB-SLAM3-ROS2-Docker``` (ignore if you are already in the folder)
-2. ```sudo docker compose run orb_slam3_22_humble```
-3. This should take you inside the container. Once you are inside, run the command ```xeyes``` and a pair of eyes should pop-up. If they do, x11 forwarding has correctly been setup on your computer.
+For no GPU `export GPU_CONFIG=()`
+For AMD GPU `export GPU_CONFIG=(--device=/dev/kfd --device=/dev/dri --group-add video)`
+
+1. `rocker --name orbslam3 --x11 ${GPU_CONFIG} --volume ./container_root/:/root/:rw ./ros_env_vars.sh:/root/ros_env_vars.sh:rw ./orb_slam3_ros2_wrapper/:/root/colcon_ws/src/orb_slam3_ros2_wrapper/:rw ./orb_slam3_map_generator/:/root/colcon_ws/src/orb_slam3_map_generator/:rw ./slam_msgs/:/root/colcon_ws/src/slam_msgs/:rw ./ORB_SLAM3/:/home/orb/ORB_SLAM3/:rw ../bags:/bags:ro -- orb-slam3:humble-jammy`
+1. This should take you inside the container. Once you are inside, run the command ```xeyes``` and a pair of eyes should pop-up. If they do, x11 forwarding has correctly been setup on your computer.
 
 ## 5. Building the ORB-SLAM3 Wrapper
 
 Launch the container using steps in (4).
 ```bash
-cd /home/orb/ORB_SLAM3/ && sudo chmod +x build.sh && ./build.sh
+cd /home/orb/ORB_SLAM3/ && chmod +x build.sh && ./build.sh
 cd /root/colcon_ws/ && colcon build --symlink-install && source install/setup.bash
 ```
 
-## Launching ORB-SLAM3
+## Launching ORB-SLAM3 with Rosario v2 dataset
 
 Launch the container using steps in (4).
-If you are inside the container, run the following:
 
-1. ```ros2 launch orb_slam3_ros2_wrapper unirobot.launch.py```
-3. You can adjust the robot namespace in the ```unirobot.launch.py``` file.
+Convert the [RosarioV2](https://github.com/CIFASIS/rosariov2) dataset to ROS2 Humble.
+
+If you are inside the container, run the following:
+1. `ros2 launch orb_slam3_ros2_wrapper bag.launch.py bag_path:=/bags/rosariov2/ros2/2023-12-26-15-10-15 executable:=stereo config_file_path:=/root/colcon_ws/src/orb_slam3_ros2_wrapper/params/rosariov2_rgb.yaml`
+
 
 ## Running this with a Gazebo Sim simulation.
 
@@ -97,8 +95,10 @@ The simulation and the wrapper both have their ```ROS_DOMAIN_ID``` set to 55 so 
 | `robot_base_frame`      | `base_footprint` | The name of the frame attached to the robot's base. |
 | `global_frame`          | `map`         | The name of the global frame of reference. It represents a fixed world coordinate frame in which the robot navigates.|
 | `odom_frame`            | `odom`        | The name of the odometry frame. |
-| `rgb_image_topic_name` | `rgb_camera` | The topic to recieve rgb images. |
-| `depth_image_topic_name` | `depth_camera` | The topic to recieve depth images. |
+| `rgb_image_topic_name` | `rgb_camera` | The topic to recieve rgb images, only with rgbd executable. |
+| `depth_image_topic_name` | `depth_camera` | The topic to recieve depth images, only with rgbd executable. |
+| `rgb_image_left_topic_name` | `/camera/left/raw_image` | The topic to recieve left rgb images, only with stereo exectuable. |
+| `rgb_image_right_topic_name` | `/camera/right/raw_image` | The topic to recieve right rgb images, only with stereo executable. |
 | `imu_topic_name` | `imu` | The topic to recieve IMU messages (Not used in RGB-D mode). |
 | `visualization`         | `true`        | A boolean flag to enable or disable visualization. When set to `true`, the ORB-SLAM3 viewer will show up with the tracked points and the keyframe trajectories.|
 | `odometry_mode`      | `false`       | A boolean flag to toggle odometry mode. When `false`, the system operates without relying on odometry data, which might be used in scenarios where odometry information is unavailable or unreliable. In this case, it publishes the transform directly between the ```global_frame``` and the ```robot_base_frame```. Further information can be found on the [FAQ](https://github.com/suchetanrs/ORB-SLAM3-ROS2-Docker/wiki/FAQs)|
@@ -108,12 +108,9 @@ The simulation and the wrapper both have their ```ROS_DOMAIN_ID``` set to 55 so 
 
 ## Important notes
 
-ORB-SLAM3 is launched from ```orb_slam3_docker_20_humble/orb_slam3_ros2_wrapper/launch/rgbd.launch.py``` which inturn is launched from ```orb_slam3_docker_20_humble/orb_slam3_ros2_wrapper/launch/unirobot.launch.py```
+For simulation ORB-SLAM3 is launched from ```orb_slam3_docker_20_humble/orb_slam3_ros2_wrapper/launch/rgbd.launch.py``` which inturn is launched from ```orb_slam3_docker_20_humble/orb_slam3_ros2_wrapper/launch/unirobot.launch.py```
 
 Currently the ```rgbd.launch.py``` launch file defaults to ```orb_slam3_ros2_wrapper/params/gazebo_rgbd.yaml```. You can modify this with your own parameter file in case you wish to use your own camera.
 
 The very initial versions of this code were derived from [thien94/orb_slam3_ros_wrapper](https://github.com/thien94/orb_slam3_ros_wrapper) and [zang9/ORB_SLAM3_ROS2](https://github.com/zang09/ORB_SLAM3_ROS2)
 
-# Star history
-
-<img src="star-history-2025416.png" alt="Star-history" width="600">
